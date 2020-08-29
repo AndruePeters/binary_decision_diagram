@@ -5,48 +5,61 @@
 #ifndef BDD_H
 #define BDD_H
 
+#include <cassert>
+#include <cmath>
+#include <cstdint>
+#include <iostream>
+
 /// Represents a Binary Decision Diagram
 /// Every node can be thought of as its own BDD
 /// Comes from realization that every boolean function can be written in "IF THEN ELSE" (ITE) form
 struct BDD {
-    int index;      ///<    subscript in the variable ordering, so lower means closer to the top
-    bdd* high;      ///<    pointer to the "THEN" bdd
-    bdd* low;       ///<    pointer to the "ELSE" bdd
-    bdd* next;      ///<    pointer to the next bdd in the bucket
+  BDD(int index, BDD* high, BDD* low) : index(index), high(high), low(low) {}
+  int index = 0;      ///<    subscript in the variable ordering, so lower means closer to the top
+  BDD* high = nullptr;      ///<    pointer to the "THEN" bdd
+  BDD* low = nullptr;       ///<    pointer to the "ELSE" bdd
+  BDD* next = nullptr;      ///<    pointer to the next bdd in the bucket
 };
 
-#define PAIR(a ,b) ( (((a)+(b) )∗((a)+(b)+(1) ) /(2)+(a) ) )
-#define TRIPLE(a ,b, c) ((unsigned int ) (PAIR((unsigned int )c ,PAIR (a ,b) ) ) )
-#define NODEHASH( lvl , l , h) (TRIPLE(( lvl ) ,( l ) ,(h) ) % bddnodesize ) ;
+// #define PAIR(a ,b) ( ( std::size_t(a)+ std::size_t(b) )∗(std::size_t(a)+std::size_t(b)+(1) ) /(2)+std::size_t(a) )
+// #define TRIPLE(a ,b, c) ((std::size_t int ) (PAIR((std::size_t int )c ,PAIR ((std::size_t )a ,(std::size_t )b) ) ) )
+// #define NODEHASH( lvl , l , h) (TRIPLE( (std::size_t )( lvl ) ,(std::size_t)( l ) ,(std::size_t)(h) ) % 100 ) ;
 
-constexpr unsigned pair_func(unsigned a, unsigned b)
+std::size_t pair_func(const std::size_t a, const std::size_t b)
 {
-    constexpr unsigned term1 = a + b;
-    constexpr unsigned term2 = a + b + 1;
-    constexpr unsigned term3 = 2 + a;
+    const std::size_t term1 = a + b;
+    const std::size_t term2 = a + b + 1;
+    const std::size_t term3 = 2 + a;
     return (term1 * term2) / term3;
 }
-constexpr unsigned triple_func(unsigned a, unsigned b)
+
+std::size_t triple_func(std::size_t a, std::size_t b, std::size_t c)
 {
-    constexpr unsigned pair = pair_func(a,b);
+    const std::size_t pair = pair_func(a,b);
     return pair_func(c, pair);
 }
 
-constexpr unsigned node_hash(unsigned lvl, unsigned l, unsigned h)
+std::size_t node_hash(std::size_t lvl, std::size_t l, std::size_t h)
 {
-    constexpr unsigned nodeSize = 50;
-    return triple(lvl, l, h) % nodeSize;
+    const std::size_t nodeSize = 100;
+    return triple_func(lvl, l, h) % nodeSize;
 }
 
-BDD** BDDTable;
+BDD** BDDTable = nullptr;
 
 // Used to make sure that a new node is unique
 BDD* makeNode(int var, BDD* high, BDD* low) {
-    const unsigned hash = NODEHASH(var, high, low);
+    const std::size_t hash = node_hash(
+      static_cast<std::size_t>(var), reinterpret_cast<std::size_t>(high),
+      reinterpret_cast<std::size_t>(low));
 
+    if (BDDTable == nullptr) {
+      BDDTable = new BDD* [100];
+      std::cout << "size of BDD*[100]: " << sizeof(BDD*[100]);
+    }
     // no matching bucket found
-    if (BDDTable[hash] == 0 ) {
-        BDDTable[hash] = new bdd(var, high, low);
+    if (BDDTable[hash] == nullptr ) {
+        BDDTable[hash] = new BDD(var, high, low);
         return BDDTable[hash];
     } else {
         BDD* node = BDDTable[hash]; //< first node in bucket
@@ -62,15 +75,41 @@ BDD* makeNode(int var, BDD* high, BDD* low) {
             BDD* newNode = new BDD(var, high, low);
             node->next = newNode;
             return newNode;
+        } else {
+          return node;
         }
     }
 }
 
+BDD* bdd_true()
+{
+  if (BDDTable[1] == nullptr) {
+    BDDTable[1] = makeNode(1, nullptr, nullptr);
+  }
+
+  return BDDTable[1];
+}
+
+BDD* bdd_false()
+{
+  if (BDDTable[0] == nullptr) {
+    BDDTable[0] = makeNode(0, nullptr, nullptr);
+  }
+
+  return BDDTable[0];
+}
 
 BDD* ithvar(int i) {
-    numvars++;
+    static int numvars = 2;
+
+    if (BDDTable == nullptr) {
+      BDDTable = new BDD* [100];
+      std::cout << "size of BDD*[100]: " << sizeof(BDD*[100]);
+    }
+
     BDDTable[0]->index = numvars;
     BDDTable[1]->index = numvars;
+    ++numvars;
     return makeNode(i, bdd_true(), bdd_false());
 }
 
@@ -79,7 +118,7 @@ BDD* restrict(BDD* subtree, int var, bool val) {
     if (subtree->index > var) {
         return subtree;
     } else if (subtree->index < var) {
-        return makeNode(subtree->index, restrict(subtree->high, var, val), restrict(subtree->low, var, val))
+        return makeNode(subtree->index, restrict(subtree->high, var, val), restrict(subtree->low, var, val));
     } else { // subtree->index == var
         if (val) {
             return restrict(subtree->high, var, val);
@@ -91,7 +130,7 @@ BDD* restrict(BDD* subtree, int var, bool val) {
 
 /// The ITE (if-then-else) operation computes and returns the BDD that is the result of applying the if-then-else
 /// operator to three BDDs that serve as teh if, then, and else clauses
-BDD ite(BDD* I, BDD* T, BDD* E) {
+BDD* ite(BDD* I, BDD* T, BDD* E) {
     // Base cases
     if (I == bdd_true())    return T;
     if (I == bdd_false())   return E;
@@ -102,7 +141,7 @@ BDD ite(BDD* I, BDD* T, BDD* E) {
     // splitting variable must be the topmost root
     int splitVar = I->index;
     if (splitVar > T->index) { splitVar = T->index; }
-    if (splitVar > E->index) { splitVar = E->index); }
+    if (splitVar > E->index) { splitVar = E->index; }
 
     BDD* Ixt = restrict(I, splitVar, true);
     BDD* Txt = restrict(T, splitVar, true);
@@ -114,7 +153,7 @@ BDD ite(BDD* I, BDD* T, BDD* E) {
     BDD* Exf = restrict(E, splitVar, false);
     BDD* negFtor = ite(Ixf, Txf, Exf);
 
-    BDD* result = makeNode(splitVar, posFtor, netFtor);
+    BDD* result = makeNode(splitVar, posFtor, negFtor);
     return result;
 }
 
@@ -130,7 +169,7 @@ double satcount_rec(BDD* subtree) {
     }
 
     BDD* low = subtree->low;
-    bdd* high = subtree->high;
+    BDD* high = subtree->high;
     double s = std::pow(2, low->index - subtree->index - 1);
     double size = s * satcount_rec(low);
     s = std::pow(2, high->index - subtree->index - 1);
@@ -148,7 +187,7 @@ BDD* satone_rec(BDD* subtree) {
     if (subtree == bdd_false() || subtree == bdd_true()) {
         return subtree;
     } else if (subtree->low == bdd_false()) {
-        return makeNode(subtree->index, bdd_false(), sateone_rec(subtree->high));
+        return makeNode(subtree->index, bdd_false(), satone_rec(subtree->high));
     } else { // subtree->high == bdd_false()
         return makeNode(subtree->index, satone_rec(subtree->low), bdd_false());
     }
