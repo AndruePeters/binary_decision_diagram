@@ -1,34 +1,60 @@
 #include "bdd.h"
 
+#include <algorithm>
+#include <iostream>
+
 BinaryDecisionDiagram::Node* BinaryDecisionDiagram::makeNode(std::size_t index, Node* high, Node* low)
 {
-    auto indexIterator = indexToNode.find(index);
-    if (indexIterator == end(indexToNode)) {
+    if ( (index != 0  && index != 1) && high == low) {
+        return high;
+    }
+    // lambda to actually create the node
+    auto addNode = [this, index, high, low]() {
         auto newNode = std::make_unique<BinaryDecisionDiagram::Node>(index, high, low);
-        indexToNode[index] = newNode.get();
+        indexToNode.insert({index, newNode.get()});
         nodes.push_back(std::move(newNode));
-        return newNode.get();
+        return nodes.back().get();
+    };
+
+    // search for an index to a node
+    auto [indexRangeBegin, indexRangeEnd] = indexToNode.equal_range(index);
+
+    // this block is entered if no node with the same index is found
+    if (indexRangeBegin == std::end(indexToNode) && indexRangeEnd == std::end(indexToNode)) {
+        return addNode();
     }
 
-    //  element exists
-    return indexIterator->second;
+    // attempt to see if the given node parameters already exist
+    // this is a node where the index, high, and low are all the same
+    auto nodeExistsIterator = std::find_if(indexRangeBegin, indexRangeEnd,
+        [high, low](const auto& nodeItPtr) {
+            return (nodeItPtr.second->high_ == high) && (nodeItPtr.second->low_ == low);
+        });
+
+    // if the node does not exist then add the node
+    if (nodeExistsIterator == indexRangeEnd) {
+        return addNode();
+    }
+
+    // if this specific node exists, then return it
+    return nodeExistsIterator->second;
 }
 
 BinaryDecisionDiagram::Node::Node(std::size_t index, Node* high, Node* low):
-    index_(index), high_(high), low_(low)   {}
+    index_(index), high_(high), low_(low)   { }
 
 BinaryDecisionDiagram::BinaryDecisionDiagram(std::size_t estimatedNumberVariables)
 {
-    nodes.resize(estimatedNumberVariables);
+    nodes.reserve(estimatedNumberVariables);
     indexToNode.reserve(estimatedNumberVariables);
 
-    // add the 0/1 false/true elements
+    // add the 0/false and 1/true nodes
     makeNode(0, nullptr, nullptr);
     makeNode(1, nullptr, nullptr);
 }
 
-BinaryDecisionDiagram::Node* BinaryDecisionDiagram::nthIndex(std::size_t n) {
-    return makeNode(n, nodes[1].get(), nodes[2].get());
+BinaryDecisionDiagram::Node* BinaryDecisionDiagram::addNthIndex(std::size_t n) {
+    return makeNode(n, nodes[1].get(), nodes[0].get());
 }
 
 // The if then else operation computers and returns the node that is the result of applying the if-then-else operator
@@ -42,8 +68,8 @@ BinaryDecisionDiagram::Node* BinaryDecisionDiagram::ifThenElse(BinaryDecisionDia
     // General cases
     // Splitting variable must be the topmost root
     std::size_t splitVar = ifNode->index_;
-    if (splitVar > thenNode->index_) { splitVar = thenNode->index_; }
-    if (splitVar > elseNode->index_) { splitVar = elseNode->index_; }
+    if (splitVar < thenNode->index_) { splitVar = thenNode->index_; }
+    if (splitVar < elseNode->index_) { splitVar = elseNode->index_; }
 
     Node* ifTrue = restrict(ifNode, splitVar, true);
     Node* thenTrue = restrict(thenNode, splitVar, true);
@@ -60,11 +86,12 @@ BinaryDecisionDiagram::Node* BinaryDecisionDiagram::ifThenElse(BinaryDecisionDia
 
 BinaryDecisionDiagram::Node* BinaryDecisionDiagram::restrict(BinaryDecisionDiagram::Node* root, std::size_t index, bool val)
 {
-    if (root->index_ > index) {
+    std::cout << "Attempting to add index(" << index << ") with val(" << val << ")\n\n";
+    if (root->index_ < index) {
         return root;
     }
 
-    if (root->index_ < index) {
+    if (root->index_ > index) {
         auto high = restrict(root->high_, index, val);
         auto low = restrict(root->low_, index, val);
         return makeNode(root->index_, high, low);
@@ -73,8 +100,32 @@ BinaryDecisionDiagram::Node* BinaryDecisionDiagram::restrict(BinaryDecisionDiagr
     return val ? restrict(root->high_, index, val) : restrict(root->low_, index, val);
 }
 
+std::vector<BinaryDecisionDiagram::Node*> BinaryDecisionDiagram::getNodes(std::size_t variableSubscript) {
+    std::vector<BinaryDecisionDiagram::Node*> retNodes;
+    for (const auto& nodePtr: nodes) {
+        if (nodePtr->index_ == variableSubscript) {
+            retNodes.push_back(nodePtr.get());
+        }
+    }
+    return retNodes;
+}
 
 
+std::string toDot(BinaryDecisionDiagram& bdd, const std::string& name)
+{
+    std::string dotInner;
+    for (auto& nodePtr: bdd) {
+        std::string varString = std::to_string(nodePtr->index_);
+        if (nodePtr->low_ != nullptr) {
+            dotInner += varString + " -- " + std::to_string(nodePtr->low_->index_) + " [style=dashed];\n";
+        }
+
+        if (nodePtr->high_ != nullptr) {
+            dotInner += varString + " -- " + std::to_string(nodePtr->high_->index_) + ";\n";
+        }
+    }
+    return "graph " + name + "{\n" + dotInner + "\n}";
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

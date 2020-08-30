@@ -2,24 +2,24 @@
 
 #include "bdd.h"
 
+#include <fstream>
 #include <vector>
 
-// Return a vector of BDDs
-extern BDD** BDDTable;
-std::vector<BDD*> makeNBDD(unsigned n)
-{
-  std::vector<BDD*> bdds;
-  bdds.reserve(n);
-  for(auto i = 0u; i < n; ++i) {
-    BDD* newBDD = ithvar(static_cast<int>(i));
-    bdds.push_back(newBDD);
-  }
-  return bdds;
-}
+
 
 int main()
 {
-  BDDTable = new BDD*[100];
-  auto bdds = makeNBDD(3);
-  return 0;
+    BinaryDecisionDiagram bdd;
+    auto root = bdd.addNthIndex(2);
+    auto b1 = bdd.makeNode(3, bdd.one(), bdd.one());
+    auto b2 = bdd.makeNode(3, bdd.one(), bdd.zero());
+    root->low_ = b1;
+    root->high_ = b2;
+    const auto dotFormat = toDot(bdd, "bdd");
+
+
+    std::ofstream dotOut;
+    dotOut.open("bdd.gv");
+    dotOut << dotFormat;
+    return 0;
 }

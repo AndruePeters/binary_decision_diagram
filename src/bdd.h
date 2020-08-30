@@ -29,19 +29,26 @@ public:
     explicit BinaryDecisionDiagram(std::size_t estimatedNumberVariables = 100);
 
     // Returns a constant references to the zero/one node
-    const Node* one() const { return  nodes[1].get(); }
-    const Node* zero() const { return nodes[0].get(); }
+    Node* one() const { return  nodes[1].get(); }
+    Node* zero() const { return nodes[0].get(); }
 
-    Node* nthIndex(std::size_t n);
+    Node* addNthIndex(std::size_t n);
     Node* ifThenElse(Node* ifNode, Node* thenNode, Node* elseNode);
     Node* restrict(Node* root, std::size_t var, bool val);
+    std::vector<Node*> getNodes(std::size_t variableSubscript = 0);
+
+    Node* andOperation(Node* lhs, Node* rhs) { return ifThenElse(lhs, rhs, zero()); }
+
+    auto begin() { return nodes.begin(); }
+    auto end() { return nodes.end(); }
 private:
     std::vector<std::unique_ptr<Node>> nodes;
-    std::unordered_map<std::size_t, Node*> indexToNode;
+    std::unordered_multimap<std::size_t, Node*> indexToNode;
 
     Node* ifThenElse();
 };
 
+std::string toDot(BinaryDecisionDiagram& bdd, const std::string& name);
 
 /// Represents a Binary Decision Diagram
 /// Every node can be thought of as its own BDD
