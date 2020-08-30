@@ -5,6 +5,7 @@
 #include <vector>
 
 // Return a vector of BDDs
+extern BDD** BDDTable;
 std::vector<BDD*> makeNBDD(unsigned n)
 {
   std::vector<BDD*> bdds;
