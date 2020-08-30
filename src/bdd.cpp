@@ -1,6 +1,7 @@
 #include "bdd.h"
 
 #include <algorithm>
+#include <unordered_map>
 #include <iostream>
 
 BinaryDecisionDiagram::Node* BinaryDecisionDiagram::makeNode(std::size_t index, Node* high, Node* low)
@@ -114,17 +115,27 @@ std::vector<BinaryDecisionDiagram::Node*> BinaryDecisionDiagram::getNodes(std::s
 std::string toDot(BinaryDecisionDiagram& bdd, const std::string& name)
 {
     std::string dotInner;
+    std::size_t graphId = 0;
+    std::unordered_map<std::size_t, std::string> idToLabel;
     for (auto& nodePtr: bdd) {
-        std::string varString = std::to_string(nodePtr->index_);
+        idToLabel[graphId] = std::to_string(nodePtr->index_);
+        const std::string graphIdStr = std::to_string(graphId);
         if (nodePtr->low_ != nullptr) {
-            dotInner += varString + " -- " + std::to_string(nodePtr->low_->index_) + " [style=dashed];\n";
+            dotInner += graphIdStr + " -- " + std::to_string(nodePtr->low_->index_) + " [style=dashed];\n";
         }
 
         if (nodePtr->high_ != nullptr) {
-            dotInner += varString + " -- " + std::to_string(nodePtr->high_->index_) + ";\n";
+            dotInner += graphIdStr + " -- " + std::to_string(nodePtr->high_->index_) + ";\n";
         }
+        ++graphId;
     }
-    return "graph " + name + "{\n" + dotInner + "\n}";
+
+    // build the label string to be at the top
+    std::string labelStr;
+    for (auto& [id, label]: idToLabel) {
+      labelStr += std::to_string(id) + " [label=\"" + label + "\"];\n";
+    }
+    return "graph " + name + "{\n" + labelStr +  dotInner + "\n}";
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
