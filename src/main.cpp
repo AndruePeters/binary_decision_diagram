@@ -19,8 +19,7 @@ int main()
 */
 
 
-
-    BinaryDecisionDiagram otherBdd;
+    BinaryDecisionDiagramManager otherBdd;
     auto& nodes = otherBdd.getNodes();
     auto *n2 = otherBdd.addNthIndex(2);
     auto *n3 = otherBdd.addNthIndex(3);

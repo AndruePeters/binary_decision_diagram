@@ -5,14 +5,14 @@
 #include <stack>
 #include <unordered_map>
 
-BinaryDecisionDiagram::Node *BinaryDecisionDiagram::makeNode(std::size_t index, Node *high, Node *low)
+BinaryDecisionDiagramManager::Node *BinaryDecisionDiagramManager::makeNode(std::size_t index, Node *high, Node *low)
 {
     if ((index != 0 && index != 1) && high == low) {
         return high;
     }
     // lambda to actually create the node
     auto addNode = [this, index, high, low]() {
-        auto newNode = std::make_unique<BinaryDecisionDiagram::Node>(index, high, low);
+        auto newNode = std::make_unique<BinaryDecisionDiagramManager::Node>(index, high, low);
         indexToNode.insert({ index, newNode.get() });
         nodes.push_back(std::move(newNode));
         return nodes.back().get();
@@ -41,9 +41,9 @@ BinaryDecisionDiagram::Node *BinaryDecisionDiagram::makeNode(std::size_t index, 
     return nodeExistsIterator->second;
 }
 
-BinaryDecisionDiagram::Node::Node(std::size_t index, Node *high, Node *low) : index_(index), high_(high), low_(low) {}
+BinaryDecisionDiagramManager::Node::Node(std::size_t index, Node *high, Node *low) : index_(index), high_(high), low_(low) {}
 
-BinaryDecisionDiagram::BinaryDecisionDiagram(std::size_t estimatedNumberVariables)
+BinaryDecisionDiagramManager::BinaryDecisionDiagramManager(std::size_t estimatedNumberVariables)
 {
     nodes.reserve(estimatedNumberVariables);
     indexToNode.reserve(estimatedNumberVariables);
@@ -53,14 +53,14 @@ BinaryDecisionDiagram::BinaryDecisionDiagram(std::size_t estimatedNumberVariable
     makeNode(1, nullptr, nullptr);
 }
 
-BinaryDecisionDiagram::Node *BinaryDecisionDiagram::addNthIndex(std::size_t n)
+BinaryDecisionDiagramManager::Node *BinaryDecisionDiagramManager::addNthIndex(std::size_t n)
 {
     return makeNode(n, nodes[1].get(), nodes[0].get());
 }
 
 // The if then else operation computers and returns the node that is the result of applying the if-then-else operator
 // to three nodes that serve as the if, then, and else clauses
-BinaryDecisionDiagram::Node *BinaryDecisionDiagram::ifThenElse(BinaryDecisionDiagram::Node *ifNode, BinaryDecisionDiagram::Node *thenNode, BinaryDecisionDiagram::Node *elseNode)
+BinaryDecisionDiagramManager::Node *BinaryDecisionDiagramManager::ifThenElse(BinaryDecisionDiagramManager::Node *ifNode, BinaryDecisionDiagramManager::Node *thenNode, BinaryDecisionDiagramManager::Node *elseNode)
 {
     if (ifNode == one()) { return thenNode; }
     if (ifNode == zero()) { return elseNode; }
@@ -86,7 +86,7 @@ BinaryDecisionDiagram::Node *BinaryDecisionDiagram::ifThenElse(BinaryDecisionDia
     return makeNode(splitVar, positiveFtor, negativeFtor);
 }
 
-BinaryDecisionDiagram::Node *BinaryDecisionDiagram::restrict(BinaryDecisionDiagram::Node *root, std::size_t index, bool val)
+BinaryDecisionDiagramManager::Node *BinaryDecisionDiagramManager::restrict(BinaryDecisionDiagramManager::Node *root, std::size_t index, bool val)
 {
     if (root->index_ < index) {
         return root;
@@ -101,9 +101,9 @@ BinaryDecisionDiagram::Node *BinaryDecisionDiagram::restrict(BinaryDecisionDiagr
     return val ? restrict(root->high_, index, val) : restrict(root->low_, index, val);
 }
 
-std::vector<BinaryDecisionDiagram::Node *> BinaryDecisionDiagram::getNodes(std::size_t variableSubscript)
+std::vector<BinaryDecisionDiagramManager::Node *> BinaryDecisionDiagramManager::getNodes(std::size_t variableSubscript)
 {
-    std::vector<BinaryDecisionDiagram::Node *> retNodes;
+    std::vector<BinaryDecisionDiagramManager::Node *> retNodes;
     for (const auto &nodePtr : nodes) {
         if (nodePtr->index_ == variableSubscript) {
             retNodes.push_back(nodePtr.get());
@@ -112,19 +112,19 @@ std::vector<BinaryDecisionDiagram::Node *> BinaryDecisionDiagram::getNodes(std::
     return retNodes;
 }
 
-std::string toDot(BinaryDecisionDiagram::Node *root, BinaryDecisionDiagram::Node *one, BinaryDecisionDiagram::Node *zero, const std::string &graphName)
+std::string toDot(BinaryDecisionDiagramManager::Node *root, BinaryDecisionDiagramManager::Node *one, BinaryDecisionDiagramManager::Node *zero, const std::string &graphName)
 {
     // keep track of nodes that have been visited
-    std::unordered_map<BinaryDecisionDiagram::Node *, bool> visited{ { zero, true }, { one, true } };
+    std::unordered_map<BinaryDecisionDiagramManager::Node *, bool> visited{ { zero, true }, { one, true } };
 
     // map unique graph id to label
     std::unordered_map<std::size_t, std::string> idToLabel{ { 0, "0" }, { 1, "1" } };
 
     // map a node pointer to an id
-    std::unordered_map<BinaryDecisionDiagram::Node *, std::size_t> nodeToId = { { zero, 0 }, { one, 1 } };
+    std::unordered_map<BinaryDecisionDiagramManager::Node *, std::size_t> nodeToId = { { zero, 0 }, { one, 1 } };
 
     // used for dfs algorithm
-    std::stack<BinaryDecisionDiagram::Node *> nodeStack;
+    std::stack<BinaryDecisionDiagramManager::Node *> nodeStack;
     nodeStack.push(root);
 
     std::string dotInner;
@@ -184,7 +184,7 @@ std::string toDot(BinaryDecisionDiagram::Node *root, BinaryDecisionDiagram::Node
     return "graph " + graphName + " {\n" + graphLabels + dotInner + "}";
 }
 
-std::string toDot(BinaryDecisionDiagram &bdd, const std::string &name)
+std::string toDot(BinaryDecisionDiagramManager &bdd, const std::string &name)
 {
     std::string dotInner;
     std::size_t graphId = 0;
@@ -214,13 +214,13 @@ std::string toDot(BinaryDecisionDiagram &bdd, const std::string &name)
 
 namespace std {
 template<>
-struct hash<BinaryDecisionDiagram::Node>
+struct hash<BinaryDecisionDiagramManager::Node>
 {
-    std::size_t operator()(BinaryDecisionDiagram::Node const &node) const
+    std::size_t operator()(BinaryDecisionDiagramManager::Node const &node) const
     {
         const std::size_t indexHash = std::hash<std::size_t>{}(node.index_);
-        const std::size_t highHash = std::hash<BinaryDecisionDiagram::Node *>{}(node.high_);
-        const std::size_t lowHash = std::hash<BinaryDecisionDiagram::Node *>{}(node.low_) << 1;
+        const std::size_t highHash = std::hash<BinaryDecisionDiagramManager::Node *>{}(node.high_);
+        const std::size_t lowHash = std::hash<BinaryDecisionDiagramManager::Node *>{}(node.low_) << 1;
         const std::size_t lowHighHash = (highHash ^ lowHash) << 1;
         const std::size_t finalHash = (indexHash ^ lowHighHash) << 1;
         return finalHash;

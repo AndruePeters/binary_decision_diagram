@@ -15,7 +15,8 @@
 
 /// Binary Decision Diagram
 /// Each node contains the index (subscript) and a pointer to the next node
-class BinaryDecisionDiagram {
+class BinaryDecisionDiagramManager
+{
 public:
     struct Node {
         Node(std::size_t index, Node* high, Node* low);
@@ -26,7 +27,7 @@ public:
 
     Node* makeNode(std::size_t index, Node* high, Node* low);
 
-    explicit BinaryDecisionDiagram(std::size_t estimatedNumberVariables = 100);
+    explicit BinaryDecisionDiagramManager(std::size_t estimatedNumberVariables = 100);
 
     // Returns a constant references to the zero/one node
     Node* one() const { return  nodes[1].get(); }
@@ -49,7 +50,7 @@ private:
     std::unordered_multimap<std::size_t, Node*> indexToNode;
 };
 
-std::string toDot(BinaryDecisionDiagram& bdd, const std::string& name);
-std::string toDot(BinaryDecisionDiagram::Node* root, BinaryDecisionDiagram::Node* one, BinaryDecisionDiagram::Node* zero, const std::string& graphName);
+std::string toDot(BinaryDecisionDiagramManager & bdd, const std::string& name);
+std::string toDot(BinaryDecisionDiagramManager::Node* root, BinaryDecisionDiagramManager::Node* one, BinaryDecisionDiagramManager::Node* zero, const std::string& graphName);
 
 #endif
