@@ -43,7 +43,8 @@ public:
 
     BinaryDecisionDiagram* andOperation(BinaryDecisionDiagram* lhs, BinaryDecisionDiagram* rhs) { return ifThenElse(lhs, rhs, zero()); }
     BinaryDecisionDiagram* orOperation(BinaryDecisionDiagram* lhs, BinaryDecisionDiagram* rhs) { return ifThenElse(lhs, one(), rhs);}
-    BinaryDecisionDiagram* xorOperation(BinaryDecisionDiagram* lhs, BinaryDecisionDiagram* rhs) { return ifThenElse(lhs, ifThenElse(rhs, zero(), one()), rhs); }
+    BinaryDecisionDiagram* xorOperation(BinaryDecisionDiagram* lhs, BinaryDecisionDiagram* rhs) { return ifThenElse(lhs, negate(rhs), rhs); }
+    BinaryDecisionDiagram* negate(BinaryDecisionDiagram* node) { return ifThenElse(node, zero(), one()); }
     std::vector<std::unique_ptr<BinaryDecisionDiagram>>& getNodes() { return nodes; }
 
     auto begin() { return nodes.begin(); }
