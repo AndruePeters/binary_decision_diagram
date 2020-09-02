@@ -73,17 +73,17 @@ BinaryDecisionDiagram *BinaryDecisionDiagramManager::ifThenElse(BinaryDecisionDi
     if (splitVar < thenNode->index_) { splitVar = thenNode->index_; }
     if (splitVar < elseNode->index_) { splitVar = elseNode->index_; }
 
-    BinaryDecisionDiagram* ifTrue = restrict(ifNode, splitVar, true);
-    BinaryDecisionDiagram* thenTrue = restrict(thenNode, splitVar, true);
-    BinaryDecisionDiagram* elseTrue = restrict(elseNode, splitVar, true);
-    BinaryDecisionDiagram* positiveFtor = ifThenElse(ifTrue, thenTrue, elseTrue);
+    auto* ifTrue = restrict(ifNode, splitVar, true);
+    auto* thenTrue = restrict(thenNode, splitVar, true);
+    auto* elseTrue = restrict(elseNode, splitVar, true);
+    auto* positiveFactor = ifThenElse(ifTrue, thenTrue, elseTrue);
 
     BinaryDecisionDiagram* ifFalse = restrict(ifNode, splitVar, false);
     BinaryDecisionDiagram* thenFalse = restrict(thenNode, splitVar, false);
     BinaryDecisionDiagram* elseFalse = restrict(elseNode, splitVar, false);
-    BinaryDecisionDiagram* negativeFtor = ifThenElse(ifFalse, thenFalse, elseFalse);
+    BinaryDecisionDiagram* negativeFactor = ifThenElse(ifFalse, thenFalse, elseFalse);
 
-    return makeBinaryDecisionDiagram(splitVar, positiveFtor, negativeFtor);
+    return makeBinaryDecisionDiagram(splitVar, positiveFactor, negativeFactor);
 }
 
 BinaryDecisionDiagram *BinaryDecisionDiagramManager::restrict(BinaryDecisionDiagram *root, std::size_t index, bool val)
@@ -93,8 +93,8 @@ BinaryDecisionDiagram *BinaryDecisionDiagramManager::restrict(BinaryDecisionDiag
     }
 
     if (root->index_ > index) {
-        auto high = restrict(root->high_, index, val);
-        auto low = restrict(root->low_, index, val);
+        auto *high = restrict(root->high_, index, val);
+        auto *low = restrict(root->low_, index, val);
         return makeBinaryDecisionDiagram(root->index_, high, low);
     }
     // subtree->index_ == index
@@ -146,7 +146,6 @@ std::string toDot(BinaryDecisionDiagram *root, BinaryDecisionDiagram *one, Binar
             idToLabel[uniqueGraphId++] = std::to_string(node->index_);
         }
 
-
         visited[node] = true;
 
         if (node->high_ != nullptr) {
@@ -167,7 +166,6 @@ std::string toDot(BinaryDecisionDiagram *root, BinaryDecisionDiagram *one, Binar
                 nodeToId[node->low_] = uniqueGraphId;
                 idToLabel[uniqueGraphId++] = std::to_string(node->low_->index_);
             }
-
 
             dotInner += "\t" + std::to_string(nodeID) + " -- " + std::to_string(nodeToId[node->low_]) + " [style=dashed];\n";
             if (visited.count(node->low_) == 0) {
