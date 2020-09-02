@@ -13,44 +13,47 @@
 #include <memory>
 #include <unordered_map>
 
+struct BinaryDecisionDiagram {
+    BinaryDecisionDiagram(std::size_t index, BinaryDecisionDiagram* high, BinaryDecisionDiagram* low);
+    std::size_t index_ = 0;
+    BinaryDecisionDiagram* high_ = nullptr;
+    BinaryDecisionDiagram* low_ = nullptr;
+};
+
+
 /// Binary Decision Diagram
 /// Each node contains the index (subscript) and a pointer to the next node
 class BinaryDecisionDiagramManager
 {
 public:
-    struct Node {
-        Node(std::size_t index, Node* high, Node* low);
-        std::size_t index_ = 0;
-        Node* high_ = nullptr;
-        Node* low_ = nullptr;
-    };
 
-    Node* makeNode(std::size_t index, Node* high, Node* low);
+
+    BinaryDecisionDiagram* makeBinaryDecisionDiagram(std::size_t index, BinaryDecisionDiagram* high, BinaryDecisionDiagram* low);
 
     explicit BinaryDecisionDiagramManager(std::size_t estimatedNumberVariables = 100);
 
-    // Returns a constant references to the zero/one node
-    Node* one() const { return  nodes[1].get(); }
-    Node* zero() const { return nodes[0].get(); }
+    // Returns a constant references to the zero/one BinaryDecisionDiagram
+    BinaryDecisionDiagram* one() const { return  nodes[1].get(); }
+    BinaryDecisionDiagram* zero() const { return nodes[0].get(); }
 
-    Node* addNthIndex(std::size_t n);
-    Node* ifThenElse(Node* ifNode, Node* thenNode, Node* elseNode);
-    Node* restrict(Node* root, std::size_t var, bool val);
-    std::vector<Node*> getNodes(std::size_t variableSubscript);
+    BinaryDecisionDiagram* addNthIndex(std::size_t n);
+    BinaryDecisionDiagram* ifThenElse(BinaryDecisionDiagram* ifNode, BinaryDecisionDiagram* thenNode, BinaryDecisionDiagram* elseNode);
+    BinaryDecisionDiagram* restrict(BinaryDecisionDiagram* root, std::size_t var, bool val);
+    std::vector<BinaryDecisionDiagram*> getNodes(std::size_t variableSubscript);
 
-    Node* andOperation(Node* lhs, Node* rhs) { return ifThenElse(lhs, rhs, zero()); }
-    Node* orOperation(Node* lhs, Node* rhs) { return ifThenElse(lhs, one(), rhs);}
-    Node* xorOperation(Node* lhs, Node* rhs) { return ifThenElse(lhs, ifThenElse(rhs, zero(), one()), rhs); }
-    std::vector<std::unique_ptr<Node>>& getNodes() { return nodes; }
+    BinaryDecisionDiagram* andOperation(BinaryDecisionDiagram* lhs, BinaryDecisionDiagram* rhs) { return ifThenElse(lhs, rhs, zero()); }
+    BinaryDecisionDiagram* orOperation(BinaryDecisionDiagram* lhs, BinaryDecisionDiagram* rhs) { return ifThenElse(lhs, one(), rhs);}
+    BinaryDecisionDiagram* xorOperation(BinaryDecisionDiagram* lhs, BinaryDecisionDiagram* rhs) { return ifThenElse(lhs, ifThenElse(rhs, zero(), one()), rhs); }
+    std::vector<std::unique_ptr<BinaryDecisionDiagram>>& getNodes() { return nodes; }
 
     auto begin() { return nodes.begin(); }
     auto end() { return nodes.end(); }
 private:
-    std::vector<std::unique_ptr<Node>> nodes;
-    std::unordered_multimap<std::size_t, Node*> indexToNode;
+    std::vector<std::unique_ptr<BinaryDecisionDiagram>> nodes;
+    std::unordered_multimap<std::size_t, BinaryDecisionDiagram*> indexToNode;
 };
 
 std::string toDot(BinaryDecisionDiagramManager & bdd, const std::string& name);
-std::string toDot(BinaryDecisionDiagramManager::Node* root, BinaryDecisionDiagramManager::Node* one, BinaryDecisionDiagramManager::Node* zero, const std::string& graphName);
+std::string toDot(BinaryDecisionDiagram* root, BinaryDecisionDiagram* one, BinaryDecisionDiagram* zero, const std::string& graphName);
 
 #endif
